@@ -1,0 +1,102 @@
+
+#include "SoftwareSerial.h"
+String ssid ="VishnuPavi";
+String password="maha1234";
+SoftwareSerial esp(3, 2);// TX, RX
+String data;
+String server = "184.106.153.149"; // www.example.com or localhost IP
+String url = "/GET /update?api_key=";// Location             
+//esp setuo
+void setup() 
+{
+esp.begin(115200);
+Serial.begin(9600);
+Serial.println("Module Reset");
+reset();
+connectWifi();
+}
+
+//reset the esp8266 module
+void reset() 
+{
+Serial.println("ESP8266 Reset...");
+esp.println("AT+RST");
+Serial.println("done");
+delay(1);
+if(esp.find("ready") ) 
+Serial.println("Success!");
+}
+
+//connect to your wifi network
+void connectWifi() 
+{
+Serial.println("Connecting to network...");
+esp.println("AT+CWMODE=1");
+Serial.println("Mode selected");
+String cmd = "AT+CWJAP=\"" +ssid+"\",\"" + password + "\"";
+Serial.println(cmd);
+esp.println(cmd);
+delay(4000);
+if(esp.find("OK"))
+{
+Serial.println("Connected!");
+}
+else
+{
+  Serial.println("Cannot Connected\nReconnecting...");
+connectWifi();
+}
+}
+
+void loop () 
+{
+Serial.println("Loop");
+//if(inches<=1)
+httppost();
+}
+
+//Function to upload data
+void httppost () 
+{ 
+  int ph=analogRead(A0); 
+  int turb=analogRead(A1);
+  int temp=analogRead(A2);
+String api="3ZU6U94TAMU22CZO";
+data ="field1="+String(ph)+"&field2="+String(turb)+"&field3="+String(temp)+"&field4=0"+"&field5=0"+"&field6=0"+"&api=" + api;
+
+esp.println("AT+CIPSTART=\"TCP\",\"" + server + "\",80");//start a TCP connection.
+delay(600);
+if( esp.find("OK")) 
+{
+Serial.println("TCP connection ready");
+} 
+String postRequest =
+"GET " + ur + " HTTPS\r\n" +
+"Host: api.thingspeak.com\r\n" +
+"Accept: *" + "/" + "*\r\n" +"channels/1121660/feeds.json?api_key=UIBTM2HIHHE49R3O&results=2"
++"Content-Length: " + data.length() + "\r\n" +
+"\r\n" + data;
+String sendCmd = "AT+CIPSEND=";//determine the number of characters to be sent.
+Serial.println(postRequest);
+esp.print(sendCmd);
+esp.println(postRequest.length() );
+delay(500);
+if(esp.find(">")) 
+{ 
+  Serial.println("Sending..."); 
+  esp.print(postRequest);
+  delay(2000);
+if( esp.find("SEND OK")) 
+{ 
+  Serial.println("Packet sent");
+while (esp.available()) 
+{
+ String tmpResp = esp.readString();
+ Serial.println(tmpResp);
+}
+
+// close the connection
+esp.println("AT+CIPCLOSE");
+}
+}
+}
